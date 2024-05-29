@@ -65,7 +65,10 @@ const allProducts = async (req, res, next) => {
 
 const singleProduct = async (req, res, next) => {
   try {
-    const product = await ProductModel.findById(req.params.id);
+    const product = await ProductModel.findById(req.params.id).populate([
+      "brand",
+      "category",
+    ]);
 
     if (!product) {
       return next(
@@ -94,45 +97,49 @@ const updateProduct = async (req, res, next) => {
       );
     }
 
-    let image = [];
+    const { name, price, description, stock, brand, category, images } =
+      req.body;
 
-    if (req.body.image) {
-      const cloudinaryFolderOption = {
-        folder: "product",
-      };
+    let uploadImages = [];
 
-      const result = await cloudinary.v2.uploader.upload(
-        req.body.image,
-        cloudinaryFolderOption
-      );
+    if (images && images.length > 0) {
+      for (const image of images) {
+        const cloudinaryFolderOption = { folder: "product" };
 
-      image = {
-        public_id: result.public_id,
-        url: result.secure_url,
-      };
+        const result = await cloudinary.v2.uploader.upload(
+          image,
+          cloudinaryFolderOption
+        );
+
+        uploadImages.push({
+          public_id: result.public_id,
+          url: result.secure_url,
+        });
+      }
     } else {
-      image = findProduct.images;
+      uploadImages = findProduct.images;
     }
 
-    const product = await ProductModel.findByIdAndUpdate(
+    const updatedProduct = await ProductModel.findByIdAndUpdate(
       req.params.id,
       {
-        name: req.body.name,
-        image: image,
+        name,
+        price,
+        description,
+        stock,
+        brand,
+        category,
+        images: uploadImages,
       },
       { new: true }
     );
 
-    if (!product) {
-      return next(new ErrorHandler("Product not found", 404));
-    }
-
     res.status(200).json({
       success: true,
-      product,
+      product: updatedProduct,
     });
   } catch (error) {
-    // Handle errors using the ErrorHandler
+    console.error(error);
     return next(
       new ErrorHandler("An error occurred while updating the product", 500)
     );
