@@ -29,7 +29,7 @@ const productSchema = new mongoose.Schema({
   },
   ratings: {
     type: Number,
-    default: 5,
+    // default: 5,
   },
   reviews: [
     {
