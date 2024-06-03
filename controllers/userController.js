@@ -4,7 +4,7 @@ const crypto = require("crypto");
 const sendToken = require("../utils/jwtToken");
 const cloudinary = require("cloudinary").v2;
 
-exports.registerUser = async (req, res, next) => {
+exports.register = async (req, res, next) => {
   const { fullname, email, password, confirmPassword } = req.body;
 
   // Check if password and confirmPassword match
@@ -34,4 +34,39 @@ exports.registerUser = async (req, res, next) => {
   } catch (error) {
     return next(new ErrorHandler(error.message, 500));
   }
+};
+
+exports.login = async (req, res, next) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return next(new ErrorHandler("Please enter email & password", 400));
+  }
+
+  const user = await User.findOne({ email }).select("+password");
+
+  console.log(user);
+
+  if (!user) {
+    return next(new ErrorHandler("Invalid Email or Password", 401));
+  }
+
+  const isPasswordMatched = await user.comparePassword(password);
+
+  if (!isPasswordMatched) {
+    return next(new ErrorHandler("Invalid Email or Password", 401));
+  }
+
+  sendToken(user, 200, res);
+};
+
+exports.profile = async (req, res, next) => {
+  const user = await User.findById(req.user.id);
+
+  console.log("logged user",user)
+
+  res.status(200).json({
+    success: true,
+    user,
+  });
 };
